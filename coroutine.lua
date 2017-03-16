@@ -1,4 +1,5 @@
--- $Id: coroutine.lua,v 1.40 2015/10/12 16:38:57 roberto Exp $
+-- $Id: coroutine.lua,v 1.42 2016/11/07 13:03:20 roberto Exp $
+-- See Copyright Notice in file all.lua
 
 print "testing coroutines"
 
@@ -267,6 +268,20 @@ assert(coroutine.resume(co, co) == false)
 assert(coroutine.resume(co, co) == false)
 
 
+-- other old bug when attempting to resume itself
+-- (trigger C-code assertions)
+do
+  local A = coroutine.running()
+  local B = coroutine.create(function() return coroutine.resume(A) end)
+  local st, res = coroutine.resume(B)
+  assert(st == true and res == false)
+
+  A = coroutine.wrap(function() return pcall(A, 1) end)
+  st, res = A()
+  assert(not st and string.find(res, "non%-suspended"))
+end
+
+
 -- attempt to resume 'normal' coroutine
 local co1, co2
 co1 = coroutine.create(function () return co2() end)
@@ -360,7 +375,7 @@ else
   _G.XX = nil;
   local c = 0
   repeat c = c + 1; local a = co() until a == 10
-  assert(_G.XX == 20 and c == 10)
+  assert(_G.XX == 20 and c >= 5)
 
   co = coroutine.wrap(function ()
     T.sethook("yield 0", "", 2); foo(); return 10 end)
@@ -368,7 +383,7 @@ else
   _G.XX = nil;
   local c = 0
   repeat c = c + 1; local a = co() until a == 10
-  assert(_G.XX == 20 and c == 5)
+  assert(_G.XX == 20 and c >= 5)
   _G.X = nil; _G.XX = nil
 
   do

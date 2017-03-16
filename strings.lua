@@ -1,4 +1,5 @@
--- $Id: strings.lua,v 1.81 2015/11/25 16:56:54 roberto Exp $
+-- $Id: strings.lua,v 1.87 2016/12/21 19:23:02 roberto Exp $
+-- See Copyright Notice in file all.lua
 
 print('testing strings and string library')
 
@@ -136,10 +137,10 @@ assert(tostring(1203) == "1203")
 assert(tostring(-0) == "0")
 ]]
 assert(tostring(-32767) == "-32767")
-if 2147483647 > 0 then   -- no overflow? (32 bits)
+if math.tointeger(2147483647) then   -- no overflow? (32 bits)
   assert(tostring(-2147483647) == "-2147483647")
 end
-if 4611686018427387904 > 0 then   -- no overflow? (64 bits)
+if math.tointeger(4611686018427387904) then   -- no overflow? (64 bits)
   assert(tostring(4611686018427387904) == "4611686018427387904")
   assert(tostring(-4611686018427387904) == "-4611686018427387904")
 end
@@ -184,6 +185,28 @@ assert(string.format("-%.20s.20s", string.rep("%", 2000)) ==
 assert(string.format('"-%20s.20s"', string.rep("%", 2000)) ==
        string.format("%q", "-"..string.rep("%", 2000)..".20s"))
 
+do
+  local function checkQ (v)
+    local s = string.format("%q", v)
+    local nv = load("return " .. s)()
+    assert(v == nv and math.type(v) == math.type(nv))
+  end
+  checkQ("\0\0\1\255\u{234}")
+  checkQ(math.maxinteger)
+  checkQ(math.mininteger)
+  checkQ(math.pi)
+_USPACE[[
+  checkQ(0.1)
+]]
+_KSPACE[[
+  checkQ(1)
+]]
+  checkQ(true)
+  checkQ(nil)
+  checkQ(false)
+  checkerror("no literal", string.format, "%q", {})
+end
+
 assert(string.format("\0%s\0", "\0\0\1") == "\0\0\0\1\0")
 checkerror("contains zeros", string.format, "%10s", "\0")
 
@@ -191,9 +214,14 @@ checkerror("contains zeros", string.format, "%10s", "\0")
 assert(string.format("%s %s", nil, true) == "nil true")
 assert(string.format("%s %.4s", false, true) == "false true")
 assert(string.format("%.3s %.3s", false, true) == "fal tru")
-local m = setmetatable({}, {__tostring = function () return "hello" end})
+local m = setmetatable({}, {__tostring = function () return "hello" end,
+                            __name = "hi"})
 assert(string.format("%s %.10s", m, m) == "hello hello")
+getmetatable(m).__tostring = nil   -- will use '__name' from now on
+assert(string.format("%.4s", m) == "hi: ")
 
+getmetatable(m).__tostring = function () return {} end
+checkerror("'__tostring' must return a string", tostring, m)
 
 _USPACE[[
 assert(string.format("%x", 0.0) == "0")
@@ -203,10 +231,9 @@ _KSPACE[[
 assert(string.format("%x", 0) == "0")
 assert(string.format("%02x", 0) == "00")
 ]]
-assert(string.format("%08X", 4294967295) == "FFFFFFFF")
+assert(string.format("%08X", 0xFFFFFFFF) == "FFFFFFFF")
 assert(string.format("%+08d", 31501) == "+0031501")
 assert(string.format("%+08d", -30927) == "-0030927")
-
 
 _USPACE[[
 do    -- longest number that can be formatted
@@ -338,23 +365,23 @@ assert(table.concat(a, ",", 4) == "")
 _USPACE[[
 if not _port then
 
-  local locales = { "ptb", "ISO-8859-1", "pt_BR" }
+  local locales = { "ptb", "pt_BR.iso88591", "ISO-8859-1" }
   local function trylocale (w)
     for i = 1, #locales do
-      if os.setlocale(locales[i], w) then return true end
+      if os.setlocale(locales[i], w) then
+        print(string.format("'%s' locale set to '%s'", w, locales[i]))
+        return locales[i]
+      end
     end
+    print(string.format("'%s' locale not found", w))
     return false
   end
 
-  if not trylocale("collate")  then
-    print("locale not supported")
-  else
+  if trylocale("collate")  then
     assert("alo" < "álo" and "álo" < "amo")
   end
 
-  if not trylocale("ctype") then
-    print("locale not supported")
-  else
+  if trylocale("ctype") then
     assert(string.gsub("áéíóú", "%a", "x") == "xxxxx")
     assert(string.gsub("áÁéÉ", "%l", "x") == "xÁxÉ")
     assert(string.gsub("áÁéÉ", "%u", "x") == "áxéx")
@@ -367,6 +394,15 @@ if not _port then
 
 end
 ]]
+
+-- bug in Lua 5.3.2
+-- 'gmatch' iterator does not work across coroutines
+do
+  local f = string.gmatch("1 2 3 4 5", "%d+")
+  assert(f() == "1")
+  co = coroutine.wrap(f)
+  assert(co() == "2")
+end
 
 print('OK')
 
