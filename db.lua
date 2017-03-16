@@ -1,4 +1,5 @@
--- $Id: db.lua,v 1.78 2015/10/02 15:47:27 roberto Exp $
+-- $Id: db.lua,v 1.79 2016/11/07 13:02:34 roberto Exp $
+-- See Copyright Notice in file all.lua
 
 -- testing debug library
 
@@ -14,7 +15,8 @@ end
 
 assert(not debug.gethook())
 
-function test (s, l, p)
+local testline = 19         -- line where 'test' is defined
+function test (s, l, p)     -- this must be line 19
   collectgarbage()   -- avoid gc during trace
   local function f (event, line)
     assert(event == 'line')
@@ -740,6 +742,22 @@ do   -- testing for-iterator name
   end
 
   for i in f do end
+end
+
+
+do   -- testing debug info for finalizers
+  local name = nil
+
+  -- create a piece of garbage with a finalizer
+  setmetatable({}, {__gc = function ()
+    local t = debug.getinfo(2)   -- get callee information
+    assert(t.namewhat == "metamethod")
+    name = t.name
+  end})
+
+  -- repeat until previous finalizer runs (setting 'name')
+  repeat local a = {} until name
+  assert(name == "__gc")
 end
 
 

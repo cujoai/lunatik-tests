@@ -1,4 +1,5 @@
--- $Id: errors.lua,v 1.91 2015/10/12 16:39:56 roberto Exp $
+-- $Id: errors.lua,v 1.94 2016/12/21 19:23:02 roberto Exp $
+-- See Copyright Notice in file all.lua
 
 print("testing errors")
 
@@ -154,13 +155,19 @@ checkmessage([[
 ]], "light userdata")
 _G.D = nil
 
-do   -- named userdata
+do   -- named objects (field '__name')
 _USPACE[[
   checkmessage("math.sin(io.input())", "(number expected, got FILE*)")
 ]]
-  _ENV.XX = setmetatable({}, {__name = "My Type"})
+  _G.XX = setmetatable({}, {__name = "My Type"})
+  assert(string.find(tostring(XX), "^My Type"))
 _KBUG[[
   checkmessage("io.input(XX)", "(FILE* expected, got My Type)")
+  checkmessage("return XX + 1", "on a My Type value")
+  checkmessage("return ~io.stdin", "on a FILE* value")
+  checkmessage("return XX < XX", "two My Type values")
+  checkmessage("return {} < XX", "table with My Type")
+  checkmessage("return XX < io.stdin", "My Type with FILE*")
 ]]
   _ENV.XX = nil
 end

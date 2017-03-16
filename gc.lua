@@ -1,4 +1,5 @@
--- $Id: gc.lua,v 1.70 2015/03/04 13:09:38 roberto Exp $
+-- $Id: gc.lua,v 1.72 2016/11/07 13:11:28 roberto Exp $
+-- See Copyright Notice in file all.lua
 
 print('testing garbage collection')
 
@@ -547,8 +548,8 @@ if T then   -- tests for weird cases collecting upvalues
   collectgarbage()
   collectgarbage"stop"
   T.gcstate"atomic"
-  local x = {}
   T.gcstate"sweepallgc"
+  local x = {}
   assert(T.gccolor(u) == "black")   -- upvalue is "old" (black)
   assert(T.gccolor(x) == "white")   -- table is "new" (white)
   debug.setuservalue(u, x)          -- trigger barrier

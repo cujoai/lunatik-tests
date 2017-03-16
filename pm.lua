@@ -1,4 +1,5 @@
--- $Id: pm.lua,v 1.45 2015/10/08 15:59:24 roberto Exp $
+-- $Id: pm.lua,v 1.48 2016/11/07 13:11:28 roberto Exp $
+-- See Copyright Notice in file all.lua
 
 print('testing pattern matching')
 
@@ -161,6 +162,21 @@ assert(string.gsub('', '^', 'r') == 'r')
 assert(string.gsub('', '$', 'r') == 'r')
 print('+')
 
+
+do   -- new (5.3.3) semantics for empty matches
+  assert(string.gsub("a b cd", " *", "-") == "-a-b-c-d-")
+
+  local res = ""
+  local sub = "a  \nbc\t\td"
+  local i = 1
+  for p, e in string.gmatch(sub, "()%s*()") do
+    res = res .. string.sub(sub, i, p - 1) .. "-"
+    i = e
+  end
+  assert(res == "-a-b-c-d-")
+end
+
+
 assert(string.gsub("um (dois) tres (quatro)", "(%(%w+%))", string.upper) ==
             "um (DOIS) tres (QUATRO)")
 
@@ -233,14 +249,10 @@ do
   assert(r and #m == 80)
   r, m = f(200000)
   assert(not r and string.find(m, "too complex"))
-end
-
-checkerror("too complex", string.find, "01234567890123456789",
-                                       ".*.*.*.*.*.*.*.*a")
-]]
+end]]
 
 if not _soft then
-  -- big strings
+  print("big strings")
   local a = string.rep('a', 300000)
   assert(string.find(a, '^a*.?$'))
   assert(not string.find(a, '^a*.?b$'))
