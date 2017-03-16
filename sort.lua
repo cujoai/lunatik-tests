@@ -187,6 +187,7 @@ do
   checkmove(minI + 1, -1, 1, minI + 1, 1)  -- non overlapping
 end
 
+_USPACE[[
 checkerror("too many", table.move, {}, 0, maxI, 1)
 checkerror("too many", table.move, {}, -1, maxI - 1, 1)
 checkerror("too many", table.move, {}, minI, -1, 1)
@@ -194,7 +195,7 @@ checkerror("too many", table.move, {}, minI, maxI, 1)
 checkerror("wrap around", table.move, {}, 1, maxI, 2)
 checkerror("wrap around", table.move, {}, 1, 2, maxI)
 checkerror("wrap around", table.move, {}, minI, -2, 2)
-
+]]
 
 print"testing sort"
 

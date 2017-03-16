@@ -85,7 +85,7 @@ call(g, a)
 a = {}
 i = 1
 while i <= lim do a[i] = i; i=i+1 end
-assert(call(math.max, a) == lim)
+_USPACE[[assert(call(math.max, a) == lim)]]
 
 print("+")
 

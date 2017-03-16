@@ -7,7 +7,7 @@ local setmetatable = setmetatable
 --
 -- kernel Lua preload script
 --
-
+_KERNEL = true
 -- returns the environment of the caller of the caller of
 -- this functin, which should be the test script from which
 -- _USPACE or _KSPACE was called;
@@ -66,11 +66,11 @@ function string.format(fmt, ...)
 end
 
 -- os.clock returns ms in kernel lua
-local oclock = os.clock
-function os.clock()
-  local clock = oclock()
-  return clock >= 1000 and clock / 1000 or clock
-end
+--local oclock = os.clock
+--function os.clock()
+--  local clock = oclock()
+--  return clock >= 1000 and clock / 1000 or clock
+--end
 
 function exp(b, e)
   if e == 1 then return b
@@ -79,20 +79,43 @@ function exp(b, e)
 end
 
 -- dummies: math [[
+math = {}
 math.floor = function(x) return x end
 math.pi    = 3
 
-math.sin = function(...) return x end
-math.cos = function(...) return x end
+math.sin = function(...) return select(1, ...) end
+math.cos = function(...) return select(1, ...) end
+
+math.min = function(...)
+  return select(1, ...) < select(2, ...)
+  and select(1, ...) or select(2, ...)
+end
+math.max = function(...)
+  return select(1, ...) > select(2, ...)
+  and select(1, ...) or select(2, ...)
+end
+
+math.random = function() return 2147483647 end
+math.randomseed = function(x) return end
+math.fmod = function(...) return 1 end
+math.type = function(x) return "integer" end
+math.tointeger = function(x) return x end
+
+math.huge = (1 << 31) - 1
+math.maxinteger = (1 << 31) - 1
+math.mininteger = -(1 << 31)
 -- ]]
 -- dummies: os   [[
-os.setlocale = function(arg) return arg end
+--os.setlocale = function(arg) return arg end
+os = {}
+os.time = function() return 13091977 end
+os.clock = function() return 1488808224 end
 -- ]]
 -- dummies: io   [[
-io.stdout = {}
-io.stdout.print = function(_, ...) print(...) end
-io.stdout.write = io.stdout.print
-io.stderr = io.stdout
+--io.stdout = {}
+--io.stdout.print = function(_, ...) print(...) end
+--io.stdout.write = io.stdout.print
+--io.stderr = io.stdout
 -- ]]
 
 package = {}

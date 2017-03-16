@@ -204,7 +204,7 @@ assert(cap[0] == "shr" and cap[1] == 1 and cap[2] == a)
 t = setmetatable({1,2,3}, {__len = function () return 10 end})
 assert(#t == 10 and rawlen(t) == 3)
 assert(rawlen"abc" == 3)
-assert(not pcall(rawlen, io.stdin))
+_USPACE[[assert(not pcall(rawlen, io.stdin))]]
 assert(not pcall(rawlen, 34))
 assert(not pcall(rawlen))
 

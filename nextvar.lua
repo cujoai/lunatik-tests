@@ -251,7 +251,7 @@ for i,v in pairs(a) do
   n.n = n.n+1
   assert(i and v and a[i] == v)
 end
-assert(n.n == 9000)
+_USPACE[[assert(n.n == 9000)]]
 a = nil
 
 do   -- clear global table
