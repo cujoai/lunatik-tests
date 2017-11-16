@@ -14,7 +14,7 @@
 #define DEVICE_NAME "luadrv"
 #define CLASS_NAME "lua"
 
-#define raise_err(msg) pr_warn("[lua] %s - %s\n", __func__, msg);
+#define print(msg) pr_warn("[lua] %s - %s\n", __func__, msg);
 
 static DEFINE_MUTEX(mtx);
 
@@ -42,19 +42,19 @@ static int __init luadrv_init(void)
 {
 	L = luaL_newstate();
 	if (L == NULL) {
-		raise_err("no memory");
+		print("no memory");
 		return -ENOMEM;
 	}
 	luaL_openlibs(L);
 	major = register_chrdev(0, DEVICE_NAME, &fops);
 	if (major < 0) {
-		raise_err("major number failed");
+		print("major number failed");
 		return -ECANCELED;
 	}
 	luaclass = class_create(THIS_MODULE, CLASS_NAME);
 	if (IS_ERR(luaclass)) {
 		unregister_chrdev(major, DEVICE_NAME);
-		raise_err("class failed");
+		print("class failed");
 		return PTR_ERR(luaclass);
 	}
 	luadev = device_create(luaclass, NULL, MKDEV(major, 1), NULL, "%s", DEVICE_NAME);
@@ -62,7 +62,7 @@ static int __init luadrv_init(void)
 		class_destroy(luaclass);
 		cdev_del(&luacdev);
 		unregister_chrdev(major, DEVICE_NAME);
-		raise_err("device failed");
+		print("device failed");
 		return PTR_ERR(luaclass);
 	}
 	return 0;
@@ -74,21 +74,21 @@ static void __exit luadrv_exit(void)
 
 static int dev_open(struct inode *i, struct file *f)
 {
-	raise_err("open callback");
+	print("open callback");
 	return 0;
 }
 
 static ssize_t dev_read(struct file *f, char *buf, size_t len, loff_t *off)
 {
 	const char *msg = "Nothing yet.\n";
-	raise_err("read callback");
+	print("read callback");
 	mutex_lock(&mtx);
 	if (hasreturn) {
 		msg = lua_tostring(L, -1);
 		hasreturn = false;
 	}
 	if (copy_to_user(buf, msg, len) < 0) {
-		raise_err("copy to user failed");
+		print("copy to user failed");
 		mutex_unlock(&mtx);
 		return -ECANCELED;
 	}
@@ -110,23 +110,23 @@ static int flushL(void)
 }
 static ssize_t dev_write(struct file *f, const char *buf, size_t len, loff_t* off)
 {
-	raise_err("write callback");
+	print("write callback");
 	char *script = NULL;
 	int idx = lua_gettop(L);
 	mutex_lock(&mtx);
 	script = kmalloc(len, GFP_KERNEL);
 	if (script == NULL) {
-		raise_err("no memory");
+		print("no memory");
 		return -ENOMEM;
 	}
 	if (copy_from_user(script, buf, len) < 0) {
-		raise_err("copy from user failed");
+		print("copy from user failed");
 		mutex_unlock(&mtx);
 		return -ECANCELED;
 	}
 	script[len-1] = '\0';
 	if (luaL_dostring(L, script)) {
-		raise_err(lua_tostring(L, -1));
+		print(lua_tostring(L, -1));
 		if (flushL()) {
 			return -ECANCELED;
 		}
@@ -141,7 +141,7 @@ static ssize_t dev_write(struct file *f, const char *buf, size_t len, loff_t* of
 
 static int dev_release(struct inode *i, struct file *f)
 {
-	raise_err("release callback");
+	print("release callback");
 	mutex_lock(&mtx);
 	if (flushL()) {
 		return -ECANCELED;
