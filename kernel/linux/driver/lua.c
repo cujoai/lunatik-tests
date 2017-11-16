@@ -80,20 +80,7 @@ static int dev_open(struct inode *i, struct file *f)
 
 static ssize_t dev_read(struct file *f, char *buf, size_t len, loff_t *off)
 {
-	const char *msg = "Nothing yet.\n";
-	print("read callback");
-	mutex_lock(&mtx);
-	if (hasreturn) {
-		msg = lua_tostring(L, -1);
-		hasreturn = false;
-	}
-	if (copy_to_user(buf, msg, len) < 0) {
-		print("copy to user failed");
-		mutex_unlock(&mtx);
-		return -ECANCELED;
-	}
-	mutex_unlock(&mtx);
-	return strlen(msg) < len ? strlen(msg) : len;
+	return 0;
 }
 
 static int flushL(void)
