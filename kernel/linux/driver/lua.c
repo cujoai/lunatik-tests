@@ -57,7 +57,8 @@ static int __init luadrv_init(void)
 		print("class failed");
 		return PTR_ERR(luaclass);
 	}
-	luadev = device_create(luaclass, NULL, MKDEV(major, 1), NULL, "%s", DEVICE_NAME);
+	luadev = device_create(luaclass, NULL, MKDEV(major, 1), NULL, "%s",
+	                       DEVICE_NAME);
 	if (IS_ERR(luadev)) {
 		class_destroy(luaclass);
 		cdev_del(&luacdev);
@@ -67,6 +68,7 @@ static int __init luadrv_init(void)
 	}
 	return 0;
 }
+
 static void __exit luadrv_exit(void) 
 {
 	return;
@@ -95,7 +97,8 @@ static int flushL(void)
 	luaL_openlibs(L);
 	return 0;
 }
-static ssize_t dev_write(struct file *f, const char *buf, size_t len, loff_t* off)
+static ssize_t dev_write(struct file *f, const char *buf, size_t len,
+                         loff_t* off)
 {
 	print("write callback");
 	char *script = NULL;
