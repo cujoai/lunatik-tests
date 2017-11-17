@@ -20,7 +20,7 @@ static DEFINE_MUTEX(mtx);
 
 static int major;
 static lua_State *L;
-bool hasreturn = 0; /* does the lua state have anything for us? */
+static luaL_Buffer lua_buf;
 static struct device *luadev;
 static struct class *luaclass;
 static struct cdev luacdev;
@@ -40,12 +40,6 @@ static struct file_operations fops =
 
 static int __init luadrv_init(void)
 {
-	L = luaL_newstate();
-	if (L == NULL) {
-		print("no memory");
-		return -ENOMEM;
-	}
-	luaL_openlibs(L);
 	major = register_chrdev(0, DEVICE_NAME, &fops);
 	if (major < 0) {
 		print("major number failed");
@@ -77,6 +71,20 @@ static void __exit luadrv_exit(void)
 static int dev_open(struct inode *i, struct file *f)
 {
 	print("open callback");
+	L = luaL_newstate();
+	if (L == NULL) {
+		print("no memory");
+		return -ENOMEM;
+	}
+	luaL_openlibs(L);
+	/* load function will be called in the close cb */
+	if (lua_getglobal(L, "load") != LUA_TFUNCTION) {
+		print("load function not found");
+		lua_close(L);
+		L = NULL;
+		return -ECANCELED;
+	}
+	luaL_buffinit(L, &lua_buf);
 	return 0;
 }
 
@@ -85,60 +93,61 @@ static ssize_t dev_read(struct file *f, char *buf, size_t len, loff_t *off)
 	return 0;
 }
 
-static int flushL(void)
-{
-	lua_close(L);
-	L = luaL_newstate();
-	if (L == NULL) {
-		raise_err("flushL failed, giving up");
-		mutex_unlock(&mtx);
-		return 1;
-	}
-	luaL_openlibs(L);
-	return 0;
-}
 static ssize_t dev_write(struct file *f, const char *buf, size_t len,
                          loff_t* off)
 {
-	print("write callback");
+	int ret = 0;
 	char *script = NULL;
-	int idx = lua_gettop(L);
+
+	print("write callback");
 	mutex_lock(&mtx);
 	script = kmalloc(len, GFP_KERNEL);
 	if (script == NULL) {
 		print("no memory");
-		return -ENOMEM;
+		ret = -ENOMEM;
+		goto end;
 	}
 	if (copy_from_user(script, buf, len) < 0) {
 		print("copy from user failed");
-		mutex_unlock(&mtx);
-		return -ECANCELED;
+		ret = -ECANCELED;
+		goto end;
 	}
 	script[len-1] = '\0';
-	if (luaL_dostring(L, script)) {
-		print(lua_tostring(L, -1));
-		if (flushL()) {
-			return -ECANCELED;
-		}
-		mutex_unlock(&mtx);
-		return -ECANCELED;
-	}
+	luaL_addstring(&lua_buf, script);
+
+end:
 	kfree(script);
-	hasreturn = lua_gettop(L) > idx ? true : false;
 	mutex_unlock(&mtx);
-	return len;
+	return ret ? ret : len;
 }
 
 static int dev_release(struct inode *i, struct file *f)
 {
+	int ret = 0;
+
 	print("release callback");
 	mutex_lock(&mtx);
-	if (flushL()) {
-		return -ECANCELED;
+	luaL_pushresult(&lua_buf);
+	if (lua_pcall(L, 1, 1, 0)) {
+		print("load error:");
+		print(lua_tostring(L, -1));
+		ret = -ECANCELED;
+		goto end;
 	}
-	hasreturn = false;
+	if (lua_pcall(L, 0, 1, 0)) {
+		print("execution error:");
+		print(lua_tostring(L, -1));
+		ret = -ECANCELED;
+		goto end;
+	}
+	print("test done, final return:");
+	print(lua_tostring(L, -1));
+
+end:
+	lua_close(L);
+	L = NULL;
 	mutex_unlock(&mtx);
-	return 0;
+	return ret;
 }
 
 module_init(luadrv_init);
