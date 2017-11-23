@@ -10,10 +10,10 @@ print "testing large tables"
 local debug = require"debug" 
 
 _USPACE[[
-local lim = 2^18 + 1000
+lim = 2^18 + 1000
 ]]
 _KSPACE[[
-local lim = exp(2, 18) + 1000
+lim = exp(2, 12) + 1000
 ]]
 
 local prog = { "local y = {0" }
@@ -59,7 +59,7 @@ assert(not e and m:find("'__newindex'"))
 
 f, X = nil
 
-coroutine.yield'b'
+-- coroutine.yield'b'
 
 _USPACE[[
 if 2^32 == 0 then   -- (small integers) {   
