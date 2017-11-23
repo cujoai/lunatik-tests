@@ -779,6 +779,7 @@ do
   local function checkdeep (total, start)
     local s = deep(total, start)
     local rest = string.match(s, "^message\nstack traceback:\n(.*)$")
+    rest = string.gsub(rest, "-- db.lua...", "db.lua") 
     local cl = countlines(rest)
     -- at most 10 lines in first part, 11 in second, plus '...'
     assert(cl <= 10 + 11 + 1)

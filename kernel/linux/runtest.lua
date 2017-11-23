@@ -9,7 +9,8 @@ local function get_contents(filename)
 	return s
 end
 
-local program = get_contents(preload) .. get_contents(arg[1])
+local program = "-- " .. arg[1] .. "\n" ..
+		get_contents(preload) .. get_contents(arg[1])
 local f = assert(io.open(dev, "w"))
 local n = math.ceil(#program / io_size)
 for i = 1, n do
