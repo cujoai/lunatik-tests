@@ -6,6 +6,7 @@
 #include <linux/device.h>
 #include <linux/cdev.h>
 #include <asm/uaccess.h>
+#include <linux/uaccess.h>
 #define _KERNEL
 #include <lua/lua.h>
 #include <lua/lualib.h>
@@ -13,12 +14,13 @@
 
 #define DEVICE_NAME "luadrv"
 #define CLASS_NAME "lua"
+MODULE_LICENSE("GPL");
 
 #define print(msg) pr_warn("[lua] %s - %s\n", __func__, msg);
 
 static DEFINE_MUTEX(mtx);
 
-static int major;
+static dev_t major;
 static lua_State *L;
 static luaL_Buffer lua_buf;
 static struct device *luadev;
@@ -40,32 +42,41 @@ static struct file_operations fops =
 
 static int __init luadrv_init(void)
 {
-	major = register_chrdev(0, DEVICE_NAME, &fops);
-	if (major < 0) {
+	if (alloc_chrdev_region(&major, 0, 1, DEVICE_NAME)) {
 		print("major number failed");
 		return -ECANCELED;
 	}
 	luaclass = class_create(THIS_MODULE, CLASS_NAME);
 	if (IS_ERR(luaclass)) {
-		unregister_chrdev(major, DEVICE_NAME);
+		unregister_chrdev_region(major, 1);
 		print("class failed");
 		return PTR_ERR(luaclass);
 	}
-	luadev = device_create(luaclass, NULL, MKDEV(major, 1), NULL, "%s",
+	luadev = device_create(luaclass, NULL, major, NULL, "%s",
 	                       DEVICE_NAME);
 	if (IS_ERR(luadev)) {
 		class_destroy(luaclass);
-		cdev_del(&luacdev);
-		unregister_chrdev(major, DEVICE_NAME);
+		unregister_chrdev_region(major, 1);
 		print("device failed");
 		return PTR_ERR(luaclass);
+	}
+	cdev_init(&luacdev, &fops);
+	if (cdev_add(&luacdev, major, 1) == -1) {
+		device_destroy(luaclass, major);
+		class_destroy(luaclass);
+		unregister_chrdev_region(major, 1);
+		print("device registering failed");
+		return -1;
 	}
 	return 0;
 }
 
 static void __exit luadrv_exit(void) 
 {
-	return;
+	cdev_del(&luacdev);
+	device_destroy(luaclass, major);
+	class_destroy(luaclass);
+	unregister_chrdev_region(major, 1);
 }
 
 static int dev_open(struct inode *i, struct file *f)
