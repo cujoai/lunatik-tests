@@ -112,7 +112,7 @@ static ssize_t dev_write(struct file *f, const char *buf, size_t len,
 
 	print("write callback");
 	mutex_lock(&mtx);
-	script = kmalloc(len, GFP_KERNEL);
+	script = kmalloc(len + 1, GFP_KERNEL);
 	if (script == NULL) {
 		print("no memory");
 		ret = -ENOMEM;
@@ -123,7 +123,7 @@ static ssize_t dev_write(struct file *f, const char *buf, size_t len,
 		ret = -ECANCELED;
 		goto end;
 	}
-	script[len-1] = '\0';
+	script[len] = '\0';
 	luaL_addstring(&lua_buf, script);
 
 end:

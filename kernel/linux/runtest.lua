@@ -14,7 +14,7 @@ local program = "-- " .. arg[1] .. "\n" ..
 local f = assert(io.open(dev, "w"))
 local n = math.ceil(#program / io_size)
 for i = 1, n do
-	f:write(program:sub((i - 1) * io_size, i * io_size))
+	f:write(program:sub((i - 1) * io_size + 1, i * io_size))
 	f:flush()
 end
 f:close()
