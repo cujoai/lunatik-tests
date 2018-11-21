@@ -32,13 +32,13 @@ static int dev_release(struct inode*, struct file*);
 static ssize_t dev_read(struct file*, char*, size_t, loff_t*);
 static ssize_t dev_write(struct file*, const char*, size_t, loff_t*);
 
-#if defined DEBUG_LUABASE64
+#ifdef CONFIG_BASE64_DEBUG
 extern int luaopen_base64(lua_State* L);
 #endif
-#if defined DEBUG_LUAJSON
+#ifdef CONFIG_JSON_DEBUG
 extern int luaopen_json(lua_State* L);
 #endif
-#if defined DEBUG_LUADATA
+#ifdef CONFIG_DATA_DEBUG
 extern int luaopen_data(lua_State* L);
 #endif
 
@@ -99,24 +99,19 @@ static int dev_open(struct inode *i, struct file *f)
 		return -ENOMEM;
 	}
 	luaL_openlibs(L);
-
-#if defined DEBUG_LUABASE64
+#ifdef CONFIG_BASE64_DEBUG
 	luaL_requiref(L, "base64", luaopen_base64, 1);
 	modules++;
 #endif
-
-#if defined DEBUG_LUAJSON
+#ifdef CONFIG_JSON_DEBUG
 	luaL_requiref(L, "json", luaopen_json, 1);
 	modules++;
 #endif
-
-#if defined DEBUG_LUADATA
+#ifdef CONFIG_DATA_DEBUG
 	luaL_requiref(L, "data", luaopen_data, 1);
 	modules++;
 #endif
-	if (modules > 0) {
-		lua_pop(L, modules);
-	}
+        lua_pop(L, modules);
 
 	/* load function will be called in the close cb */
 	if (lua_getglobal(L, "load") != LUA_TFUNCTION) {
