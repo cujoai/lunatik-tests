@@ -1,9 +1,7 @@
 ccflags-y += -D_KERNEL
 
-ifdef CONFIG_LUNATIK_DEBUG
-obj-m += lunatiktest.o
+obj-$(CONFIG_LUNATIK_DEBUG) += lunatiktest.o
 lunatiktest-objs += kernel/linux/driver/driver.o
-endif
 
 ifdef CONFIG_DATA_DEBUG
 ccflags-y += -DCONFIG_DATA_DEBUG
