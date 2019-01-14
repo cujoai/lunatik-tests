@@ -32,16 +32,6 @@ static int dev_release(struct inode*, struct file*);
 static ssize_t dev_read(struct file*, char*, size_t, loff_t*);
 static ssize_t dev_write(struct file*, const char*, size_t, loff_t*);
 
-#ifdef CONFIG_BASE64_DEBUG
-extern int luaopen_base64(lua_State* L);
-#endif
-#ifdef CONFIG_JSON_DEBUG
-extern int luaopen_json(lua_State* L);
-#endif
-#ifdef CONFIG_DATA_DEBUG
-extern int luaopen_data(lua_State* L);
-#endif
-
 static struct file_operations fops =
 {
 	.open = dev_open,
@@ -91,7 +81,6 @@ static void __exit luadrv_exit(void)
 
 static int dev_open(struct inode *i, struct file *f)
 {
-	int modules = 0;
 	print("open callback");
 	L = luaL_newstate();
 	if (L == NULL) {
@@ -99,19 +88,6 @@ static int dev_open(struct inode *i, struct file *f)
 		return -ENOMEM;
 	}
 	luaL_openlibs(L);
-#ifdef CONFIG_BASE64_DEBUG
-	luaL_requiref(L, "base64", luaopen_base64, 1);
-	modules++;
-#endif
-#ifdef CONFIG_JSON_DEBUG
-	luaL_requiref(L, "json", luaopen_json, 1);
-	modules++;
-#endif
-#ifdef CONFIG_DATA_DEBUG
-	luaL_requiref(L, "data", luaopen_data, 1);
-	modules++;
-#endif
-        lua_pop(L, modules);
 
 	/* load function will be called in the close cb */
 	if (lua_getglobal(L, "load") != LUA_TFUNCTION) {
