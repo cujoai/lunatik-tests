@@ -7,7 +7,6 @@
 #include <linux/cdev.h>
 #include <asm/uaccess.h>
 #include <linux/uaccess.h>
-#define _KERNEL
 #include <lua/lua.h>
 #include <lua/lualib.h>
 #include <lua/lauxlib.h>
