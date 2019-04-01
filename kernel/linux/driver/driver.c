@@ -17,11 +17,13 @@ MODULE_LICENSE("GPL");
 
 #define print(msg) pr_warn("[lua] %s - %s\n", __func__, msg);
 
-static DEFINE_MUTEX(mtx);
+struct luastate_handle {
+	struct mutex mtx;
+	lua_State *L;
+	luaL_Buffer lua_buf;
+};
 
 static dev_t major;
-static lua_State *L;
-static luaL_Buffer lua_buf;
 static struct device *luadev;
 static struct class *luaclass;
 static struct cdev luacdev;
@@ -80,22 +82,33 @@ static void __exit luadrv_exit(void)
 
 static int dev_open(struct inode *i, struct file *f)
 {
+	struct luastate_handle *handle;
+
 	print("open callback");
-	L = luaL_newstate();
-	if (L == NULL) {
-		print("no memory");
+	if ((handle = kmalloc(sizeof(struct luastate_handle), GFP_KERNEL)) == NULL) {
+		print("could not allocate lua state handle");
 		return -ENOMEM;
 	}
-	luaL_openlibs(L);
+
+	mutex_init(&handle->mtx);
+
+	print("creating new lua state");
+	if ((handle->L = luaL_newstate()) == NULL) {
+		print("could not allocate lua state");
+		return -ENOMEM;
+	}
+	luaL_openlibs(handle->L);
 
 	/* load function will be called in the close cb */
-	if (lua_getglobal(L, "load") != LUA_TFUNCTION) {
+	if (lua_getglobal(handle->L, "load") != LUA_TFUNCTION) {
 		print("load function not found");
-		lua_close(L);
-		L = NULL;
+		lua_close(handle->L);
+		handle->L = NULL;
 		return -ECANCELED;
 	}
-	luaL_buffinit(L, &lua_buf);
+	luaL_buffinit(handle->L, &handle->lua_buf);
+
+	f->private_data = handle;
 	return 0;
 }
 
@@ -109,9 +122,15 @@ static ssize_t dev_write(struct file *f, const char *buf, size_t len,
 {
 	int ret = 0;
 	char *script = NULL;
+	struct luastate_handle *handle = f->private_data;
 
 	print("write callback");
-	mutex_lock(&mtx);
+	if (handle == NULL) {
+		print("invalid lua state handle");
+		return -ESTALE;
+	}
+
+	mutex_lock(&handle->mtx);
 	script = kmalloc(len + 1, GFP_KERNEL);
 	if (script == NULL) {
 		print("no memory");
@@ -124,40 +143,49 @@ static ssize_t dev_write(struct file *f, const char *buf, size_t len,
 		goto end;
 	}
 	script[len] = '\0';
-	luaL_addstring(&lua_buf, script);
+	luaL_addstring(&handle->lua_buf, script);
 
 end:
 	kfree(script);
-	mutex_unlock(&mtx);
+	mutex_unlock(&handle->mtx);
 	return ret ? ret : len;
 }
 
 static int dev_release(struct inode *i, struct file *f)
 {
 	int ret = 0;
+	struct luastate_handle *handle = f->private_data;
 
 	print("release callback");
-	mutex_lock(&mtx);
-	luaL_pushresult(&lua_buf);
-	if (lua_pcall(L, 1, 1, 0)) {
+	if (handle == NULL) {
+		print("invalid lua state handle");
+		return -ESTALE;
+	}
+
+	mutex_lock(&handle->mtx);
+	luaL_pushresult(&handle->lua_buf);
+	if (lua_pcall(handle->L, 1, 1, 0)) {
 		print("load error:");
-		print(lua_tostring(L, -1));
+		print(lua_tostring(handle->L, -1));
 		ret = -ECANCELED;
 		goto end;
 	}
-	if (lua_pcall(L, 0, 1, 0)) {
+	if (lua_pcall(handle->L, 0, 1, 0)) {
 		print("execution error:");
-		print(lua_tostring(L, -1));
+		print(lua_tostring(handle->L, -1));
 		ret = -ECANCELED;
 		goto end;
 	}
 	print("test done, final return:");
-	print(lua_tostring(L, -1));
+	print(lua_tostring(handle->L, -1));
 
 end:
-	lua_close(L);
-	L = NULL;
-	mutex_unlock(&mtx);
+	lua_close(handle->L);
+	handle->L = NULL;
+	mutex_unlock(&handle->mtx);
+
+	kfree(handle);
+	f->private_data = NULL;
 	return ret;
 }
 
