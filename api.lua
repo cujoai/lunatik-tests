@@ -730,28 +730,28 @@ do
   local x = collectgarbage("count");
   local a = T.newuserdata(5001)
   assert(T.testC("objsize 2; return 1", a) == 5001)
-  assert(collectgarbage("count") >= x+4)
+  assert(collectgarbage("count") >= x+4*1024)
   a = nil
   collectgarbage();
-  assert(collectgarbage("count") <= x+1)
+  assert(collectgarbage("count") <= x+1*1024)
   -- udata without finalizer
   x = collectgarbage("count")
   collectgarbage("stop")
   for i=1,1000 do T.newuserdata(0) end
-  assert(collectgarbage("count") > x+10)
+  assert(collectgarbage("count") > x+10*1024)
   collectgarbage()
-  assert(collectgarbage("count") <= x+1)
+  assert(collectgarbage("count") <= x+1*1024)
   -- udata with finalizer
   collectgarbage()
   x = collectgarbage("count")
   collectgarbage("stop")
   a = {__gc = function () end}
   for i=1,1000 do debug.setmetatable(T.newuserdata(0), a) end
-  assert(collectgarbage("count") >= x+10)
+  assert(collectgarbage("count") >= x+10*1024)
   collectgarbage()  -- this collection only calls TM, without freeing memory
-  assert(collectgarbage("count") >= x+10)
+  assert(collectgarbage("count") >= x+10*1024)
   collectgarbage()  -- now frees memory
-  assert(collectgarbage("count") <= x+1)
+  assert(collectgarbage("count") <= x+1*1024)
   collectgarbage("restart")
 end
 
@@ -1034,9 +1034,9 @@ function expand (n,s)
                               e, s, expand(n-1,s), e)
 end
 
-G=0; collectgarbage(); a =collectgarbage("count")
+G=0; collectgarbage(); --a =collectgarbage("count")
 load(expand(20,"G=G+1"))()
-assert(G==20); collectgarbage();  -- assert(gcinfo() <= a+1)
+assert(G==20); collectgarbage();  -- assert(gcinfo() <= a+1*1024)
 
 testamem("thread creation", function ()
   return T.doonnewstack("x=1") == 0  -- try to create thread

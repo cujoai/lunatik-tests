@@ -101,7 +101,7 @@ local showmem
 if not T then
   local max = 0
   showmem = function ()
-    local m = collectgarbage("count") * 1024
+    local m = collectgarbage("count")
     max = (m > max) and m or max
     print(format("    ---- total memory: %s, max memory: %s ----\n",
           F(m), F(max)))
@@ -112,7 +112,7 @@ else
     local total, numblocks, maxmem = T.totalmem()
     local count = collectgarbage("count")
     print(format(
-      "\n    ---- total memory: %s (%.0fK), max use: %s,  blocks: %d\n",
+      "\n    ---- total memory: %s (%d bytes), max use: %s,  blocks: %d\n",
       F(total), count, F(maxmem), numblocks))
     print(format("\t(strings:  %d, tables: %d, functions: %d, "..
                  "\n\tudata: %d, threads: %d)",

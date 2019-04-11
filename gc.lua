@@ -9,7 +9,7 @@ collectgarbage()
 
 assert(collectgarbage("isrunning"))
 
-local function gcinfo () return collectgarbage"count" * 1024 end
+local function gcinfo () return collectgarbage"count" end
 
 
 -- test weird parameters
