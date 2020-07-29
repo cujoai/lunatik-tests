@@ -121,6 +121,7 @@ static ssize_t dev_write(struct file *f, const char *buf, size_t len,
                          loff_t* off)
 {
 	int ret = 0;
+	int ret_ignore = 0;
 	char *script = NULL;
 	struct luastate_handle *handle = f->private_data;
 
@@ -137,7 +138,7 @@ static ssize_t dev_write(struct file *f, const char *buf, size_t len,
 		ret = -ENOMEM;
 		goto end;
 	}
-	if (copy_from_user(script, buf, len) < 0) {
+	if ((ret_ignore = copy_from_user(script, buf, len)) < 0) {
 		print("copy from user failed");
 		ret = -ECANCELED;
 		goto end;
