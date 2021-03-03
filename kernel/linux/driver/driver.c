@@ -5,7 +5,6 @@
 #include <linux/string.h>
 #include <linux/device.h>
 #include <linux/cdev.h>
-#include <asm/uaccess.h>
 #include <linux/uaccess.h>
 #include <lua/lua.h>
 #include <lua/lualib.h>
